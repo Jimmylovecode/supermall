@@ -1,12 +1,12 @@
 <template>
 <div id="home" class="wrapper">
 <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-
+<tab-control :titles="['流行','新款','精选']" class="tab-control" @tabClick='tabClick' ref="tabControl1" v-show="isTabFixed" ></tab-control>
 <scroll class="content" ref="scroll" :probe-type="3" @scroll="contentScroll" :pull-up-load="true" @pullingUp ="loadMore">
-<home-swiper :banners="banners"/>
+<home-swiper :banners="banners" @imageLoad="swiperImageLoad"/>
 <recommend-view :recommends="recommends"/>
 <feature-view/>
-<tab-control :titles="['流行','新款','精选']" class="tab-control" @tabClick='tabClick'></tab-control>
+<tab-control :titles="['流行','新款','精选']" class="tab-control" @tabClick='tabClick' ref="tabControl2"></tab-control>
 <goods-list :goods="goods[currentType].list" />
 </scroll>
 <back-top @click.native="backClick" v-show="isBackTop"/>
@@ -24,6 +24,7 @@ import {getHomeMultidata,getHomeGoods} from "../../network/home"
 import FeatureView from './childComps/FeatureView.vue'
 import HomeSwiper from './childComps/HomeSwiper.vue'
 import RecommendView from './childComps/RecommendView.vue'
+import {debounce} from "../../common/utils.js"
 /* import Swiper from "../../components/common/swiper/Swiper.vue"
 import SwiperItem from "../../components/common/swiper/SwiperItem.vue" */
 /* import {Swiper,SwiperItem} from '../../components/common/swiper/index' */
@@ -51,8 +52,18 @@ import SwiperItem from '../../components/common/swiper/SwiperItem.vue' */
               'sell':{page:0,list:[]}
             },
             currentType:"pop",
-            isBackTop:false
+            isBackTop:false,
+            tabOffsetTop:0,
+            isTabFixed:false,
+            saveY:0
           }
+        },
+        activated(){
+          this.$refs.scroll.scroll.scrollTo(0,this.saveY,0)
+          this.$refs.scroll.refresh()
+        },
+        deactivated(){
+          this.saveY = this.$refs.scroll.scroll.y
         },
         created(){
           getHomeMultidata().then(res =>{
@@ -63,6 +74,17 @@ import SwiperItem from '../../components/common/swiper/SwiperItem.vue' */
           this.getHomeGoods('new')
           this.getHomeGoods('sell')
           
+          //监听图片加载完成
+      /*     this.$bus.$on('itemImgLoad', () => {
+            this.$refs.scroll.refresh()
+          }) */
+        },
+        mounted(){
+          //1.图片加载完成的监听
+          const refresh = debounce(this.$refs.scroll.refresh,500)
+          this.$bus.$on('itemImgLoad', () => {
+            refresh()
+          })
         },
         methods:{
           tabClick(index){
@@ -77,6 +99,8 @@ import SwiperItem from '../../components/common/swiper/SwiperItem.vue' */
                 this.currentType = 'sell'
                 break
             }
+            this.$refs.tabControl1.currentIndex = index
+            this.$refs.tabControl2.currentIndex = index
           },
           getHomeGoods(type){
             const page = this.goods[type].page + 1
@@ -90,11 +114,14 @@ import SwiperItem from '../../components/common/swiper/SwiperItem.vue' */
             this.$refs.scroll.scroll.scrollTo(0,0,500)
           },
           contentScroll(position){
-            this.isBackTop = (-position.y) > 1000
+            this.isBackTop = (-position.y) > 1000,
+            this.isTabFixed = (-position.y) > this.tabOffsetTop
           },
           loadMore(){
             this.getHomeGoods(this.currentType)
-            
+          },
+          swiperImageLoad(){
+            this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop;
           }
         }
     }

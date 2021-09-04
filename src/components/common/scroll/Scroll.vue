@@ -30,7 +30,7 @@ export default {
             observeDOM:true,
             click:true,
             probeType:this.probeType,
-            pullUpLoad:this.pullUpLoad
+            pullUpLoad:true
         })
         //2.监听滚动的位置
         this.scroll.on('scroll',(position) => {
@@ -41,6 +41,11 @@ export default {
             this.$emit('pullingUp')
             
         })
+    },
+    methods:{
+        refresh(){
+            this.scroll.refresh            
+        }
     }
 }
 </script>
